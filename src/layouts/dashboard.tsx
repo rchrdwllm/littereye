@@ -28,9 +28,9 @@ export default function DashboardLayout() {
 
   return (
     <div
-      className={`flex min-h-screen bg-gray-50 font-geist flex-col-reverse sm:flex-row`}
+      className={`flex h-screen bg-gray-50 font-geist flex-col-reverse sm:flex-row`}
     >
-      <aside className="sticky bottom-0 bg-white flex flex-col justify-between p-4 sm:py-8 w-full border-t sm:w-64 sm:border-t-0 sm:border-r">
+      <aside className="h-screen sticky bottom-0 bg-white flex flex-col justify-between p-4 sm:py-8 w-full border-t sm:w-64 sm:border-t-0 sm:border-r">
         <div className="flex flex-col gap-4">
           <div className="hidden sm:flex items-center justify-center gap-2 font-bold text-xl">
             <span className="inline-block">
@@ -67,7 +67,7 @@ export default function DashboardLayout() {
           © 2025 LitterEye
         </div>
       </aside>
-      <main className="flex-1 p-4 sm:p-10">
+      <main className="h-screen overflow-y-scroll flex-1 p-4 sm:p-10">
         <Outlet />
       </main>
     </div>

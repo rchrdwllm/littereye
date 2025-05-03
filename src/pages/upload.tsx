@@ -3,6 +3,7 @@ import { Card } from "@heroui/card";
 import { Divider } from "@heroui/divider";
 import { CameraIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useCallback, useEffect, useRef, useState } from "react";
+import axios from "axios";
 
 export default function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -10,22 +11,30 @@ export default function UploadPage() {
   const [detectionResult, setDetectionResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [displayDimensions, setDisplayDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
+    setDetectionResult(null);
 
     const file = event.target.files?.[0];
 
     if (file && file.type.startsWith("image/")) {
       setSelectedFile(file);
+
       const reader = new FileReader();
+
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
         setImageDimensions(null);
@@ -37,6 +46,7 @@ export default function UploadPage() {
     } else {
       setSelectedFile(null);
       setPreviewUrl(null);
+
       if (file) {
         setError("Please select a valid image file (e.g., JPG, PNG, GIF).");
       }
@@ -57,41 +67,40 @@ export default function UploadPage() {
 
     setIsLoading(true);
     setError(null);
-    setProgress(30); // Initial progress
 
     try {
-      // Simulate processing time
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setProgress(60);
+      const base64Image = previewUrl.split(",")[1];
 
-      const formData = new FormData();
-      formData.append("image", selectedFile);
-
-      const res = await fetch(
-        "https://littereye-backend.onrender.com/api/detect",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      const data = await res.json();
-
-      setDetectionResult(data);
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setProgress(100);
+      await axios({
+        method: "POST",
+        url: "https://serverless.roboflow.com/littereye-wzbbi/6",
+        params: {
+          api_key: "iNwxa2ptZnsfSzKmXNYc",
+        },
+        data: base64Image,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      })
+        .then(function (response) {
+          console.log(response.data);
+          setDetectionResult(response.data);
+        })
+        .catch(function (error) {
+          console.log(error.message);
+          setError(error.message);
+        });
     } catch (err) {
       console.error("Detection failed:", err);
+
       const errorMessage =
         err instanceof Error
           ? err.message
           : "An unknown error occurred during detection.";
+
       setError(errorMessage);
-      setProgress(0);
     } finally {
       setIsLoading(false);
-      // Optionally reset progress after a short delay
-      setTimeout(() => setProgress(0), 1000);
     }
   }, [selectedFile, previewUrl]);
 
@@ -105,7 +114,75 @@ export default function UploadPage() {
     });
   };
 
-  // Effect to calculate rendered dimensions after image load and on resize
+  const drawBoundingBoxes = useCallback(() => {
+    if (
+      !detectionResult ||
+      !detectionResult.predictions ||
+      !canvasRef.current ||
+      !imageRef.current ||
+      !displayDimensions
+    ) {
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    canvas.width = displayDimensions.width;
+    canvas.height = displayDimensions.height;
+
+    const originalWidth = imageDimensions?.width || 800;
+    const originalHeight = imageDimensions?.height || 600;
+
+    const containerAspectRatio =
+      displayDimensions.width / displayDimensions.height;
+    const imageAspectRatio = originalWidth / originalHeight;
+
+    let renderedWidth,
+      renderedHeight,
+      offsetX = 0,
+      offsetY = 0;
+
+    if (imageAspectRatio > containerAspectRatio) {
+      renderedWidth = displayDimensions.width;
+      renderedHeight = displayDimensions.width / imageAspectRatio;
+      offsetY = (displayDimensions.height - renderedHeight) / 2;
+    } else {
+      renderedHeight = displayDimensions.height;
+      renderedWidth = displayDimensions.height * imageAspectRatio;
+      offsetX = (displayDimensions.width - renderedWidth) / 2;
+    }
+
+    const scaleX = renderedWidth / originalWidth;
+    const scaleY = renderedHeight / originalHeight;
+
+    detectionResult.predictions.forEach((prediction: any) => {
+      const x = prediction.x * scaleX + offsetX;
+      const y = prediction.y * scaleY + offsetY;
+      const width = prediction.width * scaleX;
+      const height = prediction.height * scaleY;
+
+      const confidence = prediction.confidence;
+      const alpha = Math.max(0.2, Math.min(0.8, confidence));
+
+      ctx.strokeStyle = `rgba(255, 99, 71, ${alpha + 0.2})`;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - width / 2, y - height / 2, width, height);
+
+      ctx.fillStyle = `rgba(255, 99, 71, ${alpha})`;
+      ctx.fillRect(x - width / 2, y - height / 2 - 24, width, 24);
+
+      ctx.fillStyle = "white";
+      ctx.font = "bold 14px Arial";
+      ctx.textAlign = "center";
+      const label = `${prediction.class} (${Math.round(confidence * 100)}%)`;
+      ctx.fillText(label, x, y - height / 2 - 7);
+    });
+  }, [detectionResult, displayDimensions, imageDimensions]);
+
   useEffect(() => {
     const calculateRenderedDimensions = () => {
       if (
@@ -114,17 +191,20 @@ export default function UploadPage() {
         imageRef.current.naturalWidth > 0
       ) {
         setImageDimensions({
-          width: imageRef.current.offsetWidth, // Use rendered width
-          height: imageRef.current.offsetHeight, // Use rendered height
+          width: imageRef.current.naturalWidth,
+          height: imageRef.current.naturalHeight,
+        });
+        setDisplayDimensions({
+          width: imageRef.current.offsetWidth,
+          height: imageRef.current.offsetHeight,
         });
       }
     };
 
-    // Calculate on initial load/mount if image is already there
     calculateRenderedDimensions();
 
     const currentImageRef = imageRef.current;
-    // Add load listener if ref exists
+
     currentImageRef?.addEventListener("load", calculateRenderedDimensions);
 
     window.addEventListener("resize", calculateRenderedDimensions);
@@ -133,7 +213,11 @@ export default function UploadPage() {
       window.removeEventListener("resize", calculateRenderedDimensions);
       currentImageRef?.removeEventListener("load", calculateRenderedDimensions);
     };
-  }, [previewUrl]); // Rerun when previewUrl changes
+  }, [previewUrl]);
+
+  useEffect(() => {
+    drawBoundingBoxes();
+  }, [drawBoundingBoxes, detectionResult, displayDimensions]);
 
   return (
     <Card className="border border-gray-200 shadow-none">
@@ -182,23 +266,60 @@ export default function UploadPage() {
         </div>
         {previewUrl && (
           <div className="space-y-4">
-            <div className="relative border border-border rounded-xl overflow-hidden shadow-inner max-h-[60vh] bg-gray-100 bg-muted flex items-center justify-center">
+            <div
+              ref={containerRef}
+              className="relative border border-border rounded-xl overflow-hidden shadow-inner max-h-[60vh] bg-gray-100 bg-muted flex items-center justify-center"
+            >
               <img
                 ref={imageRef}
-                src={
-                  !detectionResult
-                    ? previewUrl
-                    : `data:image/jpeg;base64,${detectionResult.image}`
-                }
+                src={previewUrl}
                 alt={"Uploaded image preview"}
                 width={imageDimensions?.width || 800}
                 height={imageDimensions?.height || 600}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-contain w-full h-auto max-h-[60vh]"
                 onLoad={handleImageLoad}
-                data-ai-hint="uploaded environment street park"
+              />
+              <canvas
+                ref={canvasRef}
+                className="absolute top-0 left-0 w-full h-full pointer-events-none"
               />
             </div>
+
+            {detectionResult &&
+              detectionResult.predictions &&
+              detectionResult.predictions.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-medium text-lg mb-2">
+                    Detection Results
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {detectionResult.predictions.map(
+                      (prediction: any, index: number) => (
+                        <div
+                          key={index}
+                          className="p-2 border rounded-lg bg-gray-50 flex justify-between items-center"
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {prediction.class}
+                            </span>
+                            <span className="text-sm text-gray-500 ml-2">
+                              ({Math.round(prediction.confidence * 100)}%)
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
           </div>
         )}
       </div>
