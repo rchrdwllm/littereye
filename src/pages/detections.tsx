@@ -21,7 +21,9 @@ interface Detection {
 
 export default function DetectionsPage() {
   const [detections, setDetections] = useState<Detection[]>([]);
-  const [selectedDetection, setSelectedDetection] = useState<Detection | null>(null);
+  const [selectedDetection, setSelectedDetection] = useState<Detection | null>(
+    null
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -43,7 +45,12 @@ export default function DetectionsPage() {
   };
 
   useEffect(() => {
-    if (selectedDetection && canvasRef.current && imageRef.current && imageRef.current.complete) {
+    if (
+      selectedDetection &&
+      canvasRef.current &&
+      imageRef.current &&
+      imageRef.current.complete
+    ) {
       drawBoundingBoxes();
     }
   }, [selectedDetection]);
@@ -102,7 +109,10 @@ export default function DetectionsPage() {
       <header className="p-8 pb-4">
         <h1 className="text-2xl font-bold mb-2">Detection History</h1>
         <div className="flex justify-between items-center">
-          <p className="text-gray-500">{detections.length} detection{detections.length !== 1 ? 's' : ''} found</p>
+          <p className="text-gray-500">
+            {detections.length} detection{detections.length !== 1 ? "s" : ""}{" "}
+            found
+          </p>
           {detections.length > 0 && (
             <Button color="danger" size="sm" onClick={clearAllDetections}>
               <TrashIcon className="size-4" />
@@ -112,11 +122,14 @@ export default function DetectionsPage() {
         </div>
       </header>
       <Divider className="my-4" />
-      
+
       <div className="p-8 pt-4">
         {detections.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No detections yet. Upload an image or use the webcam to detect litter.</p>
+            <p className="text-gray-500">
+              No detections yet. Upload an image or use the webcam to detect
+              litter.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -124,7 +137,9 @@ export default function DetectionsPage() {
               <div
                 key={detection.id}
                 className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                  selectedDetection?.id === detection.id ? "ring-2 ring-primary" : "hover:shadow-md"
+                  selectedDetection?.id === detection.id
+                    ? "ring-2 ring-primary"
+                    : "hover:shadow-md"
                 }`}
                 onClick={() => setSelectedDetection(detection)}
               >
@@ -138,10 +153,12 @@ export default function DetectionsPage() {
                 <div className="p-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="text-xs text-gray-500">{formatDate(detection.timestamp)}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(detection.timestamp)}
+                      </span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {detection.predictions.map((pred, idx) => (
-                          <span 
+                          <span
                             key={idx}
                             className="text-xs bg-gray-100 px-2 py-1 rounded-md"
                           >
@@ -150,14 +167,16 @@ export default function DetectionsPage() {
                         ))}
                       </div>
                     </div>
-                    <span className="bg-gray-100 text-xs px-2 py-1 rounded capitalize">{detection.source}</span>
+                    <span className="bg-gray-100 text-xs px-2 py-1 rounded capitalize">
+                      {detection.source}
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-        
+
         {selectedDetection && (
           <div className="mt-8 border-t pt-8">
             <h2 className="text-xl font-bold mb-4">Detection Details</h2>
@@ -181,24 +200,33 @@ export default function DetectionsPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Source:</span>
-                      <span className="font-medium capitalize">{selectedDetection.source}</span>
+                      <span className="font-medium capitalize">
+                        {selectedDetection.source}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Date:</span>
-                      <span className="font-medium">{formatDate(selectedDetection.timestamp)}</span>
+                      <span className="font-medium">
+                        {formatDate(selectedDetection.timestamp)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Objects:</span>
-                      <span className="font-medium">{selectedDetection.predictions.length}</span>
+                      <span className="font-medium">
+                        {selectedDetection.predictions.length}
+                      </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-medium mb-2">Detections</h3>
                   <div className="space-y-2">
                     {selectedDetection.predictions.map((pred, idx) => (
-                      <div key={idx} className="p-2 border rounded-lg bg-gray-50">
+                      <div
+                        key={idx}
+                        className="p-2 border rounded-lg bg-gray-50"
+                      >
                         <div className="flex justify-between">
                           <span className="font-medium">{pred.class}</span>
                           <span>{Math.round(pred.confidence * 100)}%</span>

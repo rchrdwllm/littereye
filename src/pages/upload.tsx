@@ -85,20 +85,24 @@ export default function UploadPage() {
         .then(function (response) {
           console.log(response.data);
           setDetectionResult(response.data);
-          
-          // Save detection to localStorage
-          if (response.data.predictions && response.data.predictions.length > 0) {
-            const existingDetections = JSON.parse(localStorage.getItem("litterEye_detections") || "[]");
+
+          if (
+            response.data.predictions &&
+            response.data.predictions.length > 0
+          ) {
+            const existingDetections = JSON.parse(
+              localStorage.getItem("litterEye_detections") || "[]"
+            );
             const newDetection = {
-              id: `upload_${Date.now()}`, 
+              id: `upload_${Date.now()}`,
               timestamp: Date.now(),
               imageUrl: previewUrl,
               predictions: response.data.predictions,
-              source: "upload"
+              source: "upload",
             };
-            
+
             localStorage.setItem(
-              "litterEye_detections", 
+              "litterEye_detections",
               JSON.stringify([newDetection, ...existingDetections])
             );
           }
