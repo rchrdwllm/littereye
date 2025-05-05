@@ -1,9 +1,10 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import {
   ArrowUpTrayIcon,
   CameraIcon,
   EyeIcon,
 } from "@heroicons/react/24/outline";
+import { useEffect } from "react";
 
 const navItems = [
   {
@@ -25,6 +26,13 @@ const navItems = [
 
 export default function DashboardLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname === "/") {
+      navigate("/upload", { replace: true });
+    }
+  }, [location.pathname]);
 
   return (
     <div
